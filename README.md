@@ -1,82 +1,74 @@
 # Eclipse Circle Animation
 
-Turns a sequence of partial-solar-eclipse frames into a rotating "carousel"
-animation: each frame is placed on a ring (occluded side facing the center,
-solar crescent facing out) and the whole sequence orbits the ring once per loop.
+Turns partial-solar-eclipse frames into a rotating "carousel": each frame is
+placed on a ring (occluded side facing the center, crescent facing out) and the
+sequence orbits the ring once per loop.
 
 ![Eclipse circle animation](solar_eclipse_circle.gif)
 
-## Scripts
+## Process
 
-- `build_circle.sh` — rotates + arranges frames, writes `eclipse_circle.png` and
-  `N` animation frames.
-- `encode_animation.sh` — encodes those frames into MP4 + looping GIF.
+1. **Get frames** — synthetic: `generate_frames.py` renders 20 test frames
+   (`eclipse_frames/`). Real footage: supply tracked shots with the sun centered.
+2. **Measure moon positions** — real frames need `moon_positions.txt`
+   (`<frame> <dx> <dy>`, direction from sun to moon). Use `measure_all.py` to
+   detect the sun disk + crescent, then `select_frames.py` to pick evenly-spaced
+   reliable frames and export the file. Synthetic frames use a built-in model.
+3. **Build the ring** — `build_circle.sh` rotates each frame so its moon faces
+   the center, arranges them on a black circle, and emits `N` animation frames.
+4. **Encode** — `encode_animation.sh` produces an MP4 and looping GIF.
+
+## Usage
+
+```sh
+python generate_frames.py          # optional: synthetic frames
+python measure_all.py              # real footage: analyze all frames
+python select_frames.py            # real footage: pick frames + moon_positions.txt
+N=16 SRC_DIR=frames POSITIONS_FILE=moon_positions.txt ./build_circle.sh
+./encode_animation.sh
+```
 
 Requires ImageMagick (`magick`) and `ffmpeg`.
 
 ## Input requirements
 
-- **Format**: PNG (RGBA with transparent background is cleanest). Opaque
-  photos also work, but the full frame rectangle (sky, etc.) will be visible
-  on the black canvas.
-- **Naming**: sequential, 1-based, zero-padded, e.g. `01.png`, `02.png`, ...
-  Default pattern `%02d.png`; change `SRC_PATTERN` if needed.
-- **Size**: any; frames should be square with the sun centered in each
-  (tracked shots). The ring radius (`R`) and canvas (`SIZE`) are in pixels
-  of the canvas, not the source frames.
+- **Format**: PNG (RGBA transparent is cleanest; opaque photos work but show the
+  frame rectangle on the black canvas).
+- **Naming**: sequential 1-based zero-padded (`01.png`, `02.png`, ...); change
+  `SRC_PATTERN` if needed.
+- **Size**: any; frames should be square with the sun centered (tracked shots).
+  `R`/`SIZE` are in canvas pixels, not source-frame pixels.
 
-## Moon positions (required for real footage)
+## Parameters (environment variables)
 
-Real eclipse frames need one measured line per frame in `moon_positions.txt`:
-
-```
-<frame_index> <dx> <dy>
-```
-
-where `(dx, dy)` is the moon center relative to the sun center in that frame's
-pixels (the direction is what matters). Without this file, the script falls
-back to a synthetic model meant only for the bundled test frames.
-
-## Usage
-
-```sh
-./build_circle.sh          # default: reads eclipse_frames/01..20.png
-./encode_animation.sh      # default: circle_frames/01..20.png -> mp4 + gif
-```
-
-## Parameters (set via environment variables)
-
-| Variable        | Default            | Purpose                        |
-|-----------------|--------------------|--------------------------------|
-| `N`             | `20`               | number of frames               |
-| `SRC_DIR`       | `eclipse_frames`   | input frame directory          |
-| `SRC_PATTERN`   | `%02d.png`         | input frame name pattern       |
-| `OUT_DIR`       | `circle_frames`    | animation frame output dir     |
-| `CIRCLE_OUT`    | `eclipse_circle.png` | static ring image name       |
-| `SIZE`          | `1600`             | square canvas side (px)        |
-| `R`             | `660`              | ring radius (px)               |
-| `POSITIONS_FILE`| `moon_positions.txt` | measured moon offsets        |
-| `S`/`B`/`MAX_FRAME` | `127.10`/`15.11`/`10` | synthetic-model only     |
-| `FRAMES_DIR`    | `circle_frames`    | encoder input dir              |
-| `FRAME_PATTERN` | `%02d.png`         | encoder frame name pattern     |
-| `FPS`           | `10`               | animation frames per second    |
+| Variable | Default | Purpose |
+|---|---|---|
+| `N` | `20` | number of frames |
+| `SRC_DIR` | `eclipse_frames` | input frame directory |
+| `SRC_PATTERN` | `%02d.png` | input frame name pattern |
+| `OUT_DIR` | `circle_frames` | animation frame output dir |
+| `CIRCLE_OUT` | `eclipse_circle.png` | static ring image |
+| `SIZE` | `1600` | square canvas side (px) |
+| `R` | `660` | ring radius (px) |
+| `POSITIONS_FILE` | `moon_positions.txt` | measured moon offsets |
+| `S`/`B`/`MAX_FRAME` | `127.10`/`15.11`/`10` | synthetic model only |
+| `FRAMES_DIR` | `circle_frames` | encoder input dir |
+| `FRAME_PATTERN` | `%02d.png` | encoder frame name pattern |
+| `FPS` | `10` | frames per second |
 | `OUT_MP4`/`OUT_GIF` | `solar_eclipse_circle.mp4/.gif` | outputs |
 
 ### Examples
 
 ```sh
-# 60 eclipse photos named frame_001.png..frame_060.png, bigger ring
+# 60 real photos named frame_001..060, bigger ring
 N=60 SRC_DIR="eclipse_photos" SRC_PATTERN="frame_%03d.png" \
 SIZE=2160 R=980 ./build_circle.sh
 
-# slower 2s loop for the same 20 frames
-FPS=5 ./encode_animation.sh
-
-# custom output names
-OUT_MP4=my_eclipse.mp4 OUT_GIF=my_eclipse.gif ./encode_animation.sh
+FPS=5 ./encode_animation.sh               # slower 2s loop
+OUT_MP4=my.mp4 OUT_GIF=my.gif ./encode_animation.sh
 ```
 
 ## Loop notes
 
-The animation frames step the starting phase one slot counter-clockwise per
-frame, so `N` frames complete exactly one lap (frame `N` flows into frame `1`).
+Animation frames step the starting phase one slot counter-clockwise per frame,
+so `N` frames complete exactly one lap (frame `N` flows into frame `1`).
