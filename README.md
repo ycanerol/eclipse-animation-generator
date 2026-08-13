@@ -4,6 +4,8 @@ Turns a sequence of partial-solar-eclipse frames into a rotating "carousel"
 animation: each frame is placed on a ring (occluded side facing the center,
 solar crescent facing out) and the whole sequence orbits the ring once per loop.
 
+![Eclipse circle animation](solar_eclipse_circle.gif)
+
 ## Scripts
 
 - `build_circle.sh` — rotates + arranges frames, writes `eclipse_circle.png` and
