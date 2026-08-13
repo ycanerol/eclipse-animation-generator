@@ -1,0 +1,8 @@
+.DS_Store
+.venv/
+eclipse_frames/rot/
+circle_frames/
+eclipse_circle.png
+solar_eclipse_circle.gif
+solar_eclipse_circle.mp4
+moon_positions.txt
